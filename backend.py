@@ -1,8 +1,9 @@
-from database import SessionLocal
-from models import Student, Transaction
+from database import engine, SessionLocal
+from models import Base, Student, Transaction
 
 def get_db_session():
     """Helper to create and return a database session."""
+    Base.metadata.create_all(engine)
     return SessionLocal()
 
 
