@@ -1,7 +1,16 @@
 from flask import Flask
+from database import engine, Base
+from models import Student, Transaction
 
 app = Flask(__name__)
 
+
+Base.metadata.create_all(engine)
+
+
 @app.route("/")
-def hello_world():
-    return "<p>Hello, World!</p>"
+def home():
+    return "Meal Plan Tracker is running!"
+
+if __name__ == "__main__":
+    app.run(debug=True)
