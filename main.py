@@ -11,7 +11,8 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-    return "Meal Plan Tracker is running!"
+    # return "Meal Plan Tracker is running!"
+    return render_template("./balance.html")
 
 @app.route("/api/balances", methods=["GET"])
 def api_get_balances():
