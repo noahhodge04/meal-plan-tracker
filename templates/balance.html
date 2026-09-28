@@ -4,10 +4,23 @@
         <title>Balance</title>
     </head>
     <body>
-        Meal Plan Tracker is running with HTML!
-        <div id="balance-field">
-            
+        <div>
+            <h2>Balance</h2>
+            <div id="balance-field">
+
+            </div>
         </div>
+        <div>
+            <h2>Transaction History</h2>
+            <a href="{{ url_for('transaction_page') }}"> New Transaction</a>
+            <ul id="transaction-list">
+                
+            </ul>
+        </div>
+        <ul id="transaction-list">
+
+        </ul>
         <script src="{{ url_for('static',filename='balance.js') }}"></script>
+        <script src="{{  url_for('static',filename='transaction_record.js')}}"></script>
     </body>
 </html>

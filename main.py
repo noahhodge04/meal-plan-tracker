@@ -14,6 +14,10 @@ def home():
     # return "Meal Plan Tracker is running!"
     return render_template("./balance.html")
 
+@app.route("/new")
+def transaction_page():
+    return render_template("./transaction_form.html")
+
 @app.route("/api/balances", methods=["GET"])
 def api_get_balances():
     """API endpoint to retrieve student balances."""
@@ -35,12 +39,10 @@ def api_get_transactions():
 @app.route("/api/transactions", methods=["POST"])
 def api_create_transaction():
     """API endpoint to submit a new transaction."""
-    data = request.get_json() or {}
-
-    transaction_type = data.get("type")
-    amount = data.get("amount")
-    location = data.get("location", "")
-    note = data.get("note", "")
+    transaction_type = request.form.get('type')
+    amount = request.form.get('amount')
+    location = request.form.get('location')
+    note = request.form.get('note')
 
     try:
         if amount is not None:
