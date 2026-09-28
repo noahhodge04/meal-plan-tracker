@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>New Transaction</title>
+    </head>
+    <body>
+        <form id="submit-transaction">
+            <label for="type">Transaction Type</label><br>
+                <input type="radio" id="swipe" name="type" value="swipe">
+                    <label for="swipe">Swipe</label>
+                <input type="radio" id="villageFlex" name="type" value="villageFlex">
+                    <label for="villageFlex">Flex</label>
+                <input type="radio" id="campusFlex" name="type" value="campusFlex">
+                    <label for="campus Flex">Campus Store Flex</label><br>
+            <label for="amount">Transaction Amount</label>
+                <input type="text" id="amount" name="amount"><br>
+            <label for="location">Location:</label>
+                <input type="text" id="location" name="location"><br>
+            <label for="note">Note:</label>
+                <input type="text" id="note" name="note"><br>
+            <input type="submit" value="Submit">
+        </form>
+        <script src="{{ url_for('static',filename='add_transaction.js') }}"></script>
+    </body>
+</html>
