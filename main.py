@@ -49,7 +49,7 @@ def api_create_transaction():
             amount = float(amount)
 
         updated_balances = create_transaction(
-            transaction_type=transaction_type,
+            type=transaction_type,
             amount=amount,
             location=location,
             note=note,
