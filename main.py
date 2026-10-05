@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request
-from backend import create_transaction, get_balances, get_transactions
+from student_class import get_balances
+from transaction_class import create_transaction, get_transactions
 #from database import engine, Base
 #from models import Student, Transaction
 
@@ -49,7 +50,7 @@ def api_create_transaction():
             amount = float(amount)
 
         updated_balances = create_transaction(
-            type=transaction_type,
+            transaction_type=transaction_type,
             amount=amount,
             location=location,
             note=note,
