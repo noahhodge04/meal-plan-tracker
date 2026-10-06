@@ -10,12 +10,11 @@ def get_db_session():
     return SessionLocal()
 
 #Validate input, update student balances, and record the transaction
-def create_transaction(self, type, amount, location="", note=""):
+def create_transaction(type, amount, location="", note=""):
     # Updates the balance, then creates a Transaction object to record the change
     # Validates type and amount before allowing input
-    student = get_hardcoded_student(SessionLocal())
 
-    valid_types = ("swipe", "villageFlex","campusFlex")
+    valid_types = ("swipe", "village_flex","campus_flex")
     if type not in valid_types:  
         raise ValueError(f"Invalid transaction type. Must be one of {valid_types}")
             
@@ -31,15 +30,15 @@ def create_transaction(self, type, amount, location="", note=""):
             if student.swipes < amount:
                 raise ValueError("Insufficent swipes available.")
             
-            self.swipes -= int(amount)
+            student.swipes -= int(amount)
 
-        elif(type == "campusFlex"):
-            if student.campusFlex < amount:
-                raise ValueError("Insufficient Campus Flex balnace")
+        elif(type == "campus_flex"):
+            if student.campus_flex < amount:
+                raise ValueError("Insufficient Campus Flex balance")
             
             student.campus_flex -= amount
 
-        elif(type == "villageFlex"):
+        elif(type == "village_flex"):
             total_flex = student.village_flex + student.campus_flex
             if total_flex < amount:
                 raise ValueError("Insufficient total Flex balance")
@@ -48,9 +47,9 @@ def create_transaction(self, type, amount, location="", note=""):
                 student.village_flex -= amount
             else:
                 #Deplete Village, pull from Campus
-                remainder = amount -student.villageFlex
+                remainder = amount -student.village_flex
                 student.village_flex = 0.0
-                student.campusFlex -= remainder
+                student.campus_flex -= remainder
 
         # Transaction record
         txn = Transaction(
@@ -60,8 +59,8 @@ def create_transaction(self, type, amount, location="", note=""):
             location=location,
             note=note
         )
-        SessionLocal.add(txn)
-        SessionLocal.commit()
+        session.add(txn)
+        session.commit()
 
         return {
             "status": "success",
@@ -70,10 +69,10 @@ def create_transaction(self, type, amount, location="", note=""):
             "campus_flex": student.campus_flex
         }
     except Exception:
-        SessionLocal.rollback()
+        session.rollback()
         raise
     finally:
-        SessionLocal.close()
+        session.close()
 
 #Retrieve all transaction history for the student, newest first.
 def get_transactions():
@@ -81,7 +80,7 @@ def get_transactions():
     session = get_db_session()
 
     try:
-        student = get_hardcoded_student
+        student = get_hardcoded_student(session)
         txns = (session.query(Transaction).filter_by(student_id=student.id).order_by(Transaction.id.desc()).all())
 
         return [

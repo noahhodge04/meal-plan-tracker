@@ -12,7 +12,13 @@ def get_hardcoded_student(session):
     student = session.get(Student, 1)
     
     if not student:
-        student = Student(1, "Test Student", 10, 25.00, 15.00)
+        student = Student(
+            id=1, 
+            name="Test Student", 
+            swipes=10, 
+            village_flex=25.00, 
+            campus_flex=15.00
+        )
 
         session.add(student)
         session.commit()

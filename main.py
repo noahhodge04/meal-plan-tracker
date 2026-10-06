@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, render_template, request
-from student_class import get_balances
-from transaction_class import create_transaction, get_transactions
+from student import get_balances
+from transaction import create_transaction, get_transactions
 #from database import engine, Base
 #from models import Student, Transaction
 
@@ -40,7 +40,7 @@ def api_get_transactions():
 @app.route("/api/transactions", methods=["POST"])
 def api_create_transaction():
     """API endpoint to submit a new transaction."""
-    transaction_type = request.form.get('type')
+    transaction_type = request.form.get('transaction_type')
     amount = request.form.get('amount')
     location = request.form.get('location')
     note = request.form.get('note')
