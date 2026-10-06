@@ -40,7 +40,7 @@ def api_get_transactions():
 @app.route("/api/transactions", methods=["POST"])
 def api_create_transaction():
     """API endpoint to submit a new transaction."""
-    transaction_type = request.form.get('transaction_type')
+    type = request.form.get('type')
     amount = request.form.get('amount')
     location = request.form.get('location')
     note = request.form.get('note')
@@ -50,7 +50,7 @@ def api_create_transaction():
             amount = float(amount)
 
         updated_balances = create_transaction(
-            transaction_type=transaction_type,
+            type=type,
             amount=amount,
             location=location,
             note=note,
