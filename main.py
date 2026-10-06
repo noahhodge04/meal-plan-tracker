@@ -42,8 +42,8 @@ def api_create_transaction():
     """API endpoint to submit a new transaction."""
     type = request.form.get('type')
     amount = request.form.get('amount')
-    location = request.form.get('location')
-    note = request.form.get('note')
+    location = request.form.get('location','')
+    note = request.form.get('note','')
 
     try:
         if amount is not None:
