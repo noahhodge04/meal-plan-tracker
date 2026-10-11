@@ -1,5 +1,6 @@
 from flask import Flask, jsonify, render_template, request
-from backend import create_transaction, get_balances, get_transactions
+from student import get_balances
+from transaction import create_transaction, get_transactions
 #from database import engine, Base
 #from models import Student, Transaction
 
@@ -39,17 +40,17 @@ def api_get_transactions():
 @app.route("/api/transactions", methods=["POST"])
 def api_create_transaction():
     """API endpoint to submit a new transaction."""
-    transaction_type = request.form.get('type')
+    type = request.form.get('type')
     amount = request.form.get('amount')
-    location = request.form.get('location')
-    note = request.form.get('note')
+    location = request.form.get('location','')
+    note = request.form.get('note','')
 
     try:
         if amount is not None:
             amount = float(amount)
 
         updated_balances = create_transaction(
-            transaction_type=transaction_type,
+            type=type,
             amount=amount,
             location=location,
             note=note,

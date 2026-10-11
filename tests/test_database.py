@@ -1,143 +1,140 @@
-from database import Base, engine, SessionLocal
+import pytest
+from sqlalchemy.exc import IntegrityError
+
 from models import Student, Transaction
 
 
-def test_student_model():
-    student = Student(id=1, name="Test Student", swipes=10, village_flex=25.00, campus_flex=15.00)
-
-    assert student.id == 1
-    assert student.name == "Test Student"
-    assert student.swipes == 10
-    assert student.village_flex == 25.00
-    assert student.campus_flex == 15.00
+@pytest.fixture
+def session(db):
+    s = db()
+    yield s
+    s.close()
 
 
-def test_student_database_persistence():
-    Base.metadata.create_all(engine)
+def add_student(session, id, name="Test Student"):
+    s = Student(id=id, name=name, swipes=10, village_flex=25.00, campus_flex=15.00)
+    session.add(s)
+    session.commit()
+    return s
 
-    session = SessionLocal()
 
-    existing_student = session.get(Student, 999)
+def test_student_model_attributes():
+    s = Student(id=1, name="Test Student", swipes=10,
+                village_flex=25.00, campus_flex=15.00)
 
-    if existing_student is not None:
-        session.delete(existing_student)
+    assert s.id == 1
+    assert s.name == "Test Student"
+    assert s.swipes == 10
+    assert s.village_flex == 25.00
+    assert s.campus_flex == 15.00
+
+
+def test_student_defaults_applied_on_save(session):
+    session.add(Student(id=1, name="Defaults"))
+    session.commit()
+
+    s = session.get(Student, 1)
+    assert s.swipes == 0
+    assert s.village_flex == 0.0
+    assert s.campus_flex == 0.0
+
+
+def test_student_requires_name(session):
+    session.add(Student(id=1))
+    with pytest.raises(IntegrityError):
         session.commit()
+    session.rollback()
 
-    student = Student(
-        id=999, name="Database Test Student", swipes=10, village_flex=25.00, campus_flex=15.00
-    )
 
-    session.add(student)
+def test_student_persistence(session):
+    add_student(session, 999, "Database Test Student")
+
+    retrieved = session.get(Student, 999)
+
+    assert retrieved is not None
+    assert retrieved.name == "Database Test Student"
+    assert retrieved.swipes == 10
+    assert retrieved.village_flex == 25.00
+    assert retrieved.campus_flex == 15.00
+
+
+def test_transaction_persistence(session):
+    add_student(session, 998)
+    session.add(Transaction(student_id=998, type="swipe", amount=1,
+                            location="Dining Hall", note="Lunch"))
     session.commit()
 
-    retrieved_student = session.get(Student, 999)
+    t = session.query(Transaction).filter_by(student_id=998).first()
 
-    assert retrieved_student is not None
-    assert retrieved_student.name == "Database Test Student"
-    assert retrieved_student.swipes == 10
-    assert retrieved_student.village_flex == 25.00
-    assert retrieved_student.campus_flex == 15.00
-
-    session.close()
+    assert t is not None
+    assert t.type == "swipe"
+    assert t.amount == 1
+    assert t.location == "Dining Hall"
+    assert t.note == "Lunch"
 
 
-    
-def test_transaction_database_persistence():
-    Base.metadata.create_all(engine)
+@pytest.mark.parametrize("missing", ["student_id", "type", "amount", "location", "note"])
+def test_transaction_required_columns(session, missing):
+    add_student(session, 1)
+    fields = dict(student_id=1, type="swipe", amount=1,
+                  location="Dining Hall", note="Lunch")
+    fields.pop(missing)
 
-    session = SessionLocal()
-
-    existing_transactions = session.query(Transaction).filter_by(student_id=998).all()
-    for existing_transaction in existing_transactions:
-        session.delete(existing_transaction)
-
-    existing_student = session.get(Student, 998)
-
-    if existing_student is not None:
-        session.delete(existing_student)
+    session.add(Transaction(**fields))
+    with pytest.raises(IntegrityError):
         session.commit()
+    session.rollback()
 
-    student = Student(
-        id=998,
-        name="Transaction Test Student",
-        swipes=10,
-        village_flex=25.00,
-        campus_flex=15.00
-    )
 
-    session.add(student)
+def test_student_transaction_relationship(session):
+    add_student(session, 997, "Relationship Test Student")
+    session.add(Transaction(student_id=997, type="swipe", amount=1,
+                            location="Dining Hall", note="Lunch"))
     session.commit()
 
-    transaction = Transaction(
-        student_id=998,
-        type="swipe",
-        amount=1,
-        location="Dining Hall",
-        note="Lunch"
-    )
+    t = session.query(Transaction).filter_by(student_id=997).first()
 
-    session.add(transaction)
+    # backref: Transaction -> Student
+    assert t.student.id == 997
+    assert t.student.name == "Relationship Test Student"
+
+    # relationship: Student -> Transactions
+    assert [x.id for x in t.student.transaction] == [t.id]
+
+
+def test_multiple_transactions_for_student(session):
+    add_student(session, 996)
+    session.add_all([
+        Transaction(student_id=996, type="swipe", amount=1,
+                    location="Dining Hall", note="Lunch"),
+        Transaction(student_id=996, type="village_flex", amount=5,
+                    location="Village Market", note="Snack"),
+        Transaction(student_id=996, type="campus_flex", amount=3,
+                    location="Campus Store", note="Supplies"),
+    ])
     session.commit()
 
-    retrieved_transaction = session.query(Transaction).filter_by(
-        student_id=998
-    ).first()
+    rows = (session.query(Transaction)
+            .filter_by(student_id=996)
+            .order_by(Transaction.id)
+            .all())
 
-    assert retrieved_transaction is not None
-    assert retrieved_transaction.type == "swipe"
-    assert retrieved_transaction.amount == 1
-    assert retrieved_transaction.location == "Dining Hall"
-    assert retrieved_transaction.note == "Lunch"
-    assert retrieved_transaction.student_id == 998
-
-    session.close()
+    assert [r.type for r in rows] == ["swipe", "village_flex", "campus_flex"]
 
 
-def test_student_transaction_relationship():
-    Base.metadata.create_all(engine)
-
-    session = SessionLocal()
-
-    existing_transactions = session.query(Transaction).filter_by(student_id=997).all()
-    for existing_transaction in existing_transactions:
-        session.delete(existing_transaction)
-
-    existing_student = session.get(Student, 997)
-
-    if existing_student is not None:
-        session.delete(existing_student)
-        session.commit()
-
-    student = Student(
-        id=997,
-        name="Relationship Test Student",
-        swipes=10,
-        village_flex=25.00,
-        campus_flex=15.00
-    )
-
-    session.add(student)
+def test_transactions_are_separated_by_student(session):
+    add_student(session, 995, "Student One")
+    add_student(session, 994, "Student Two")
+    session.add_all([
+        Transaction(student_id=995, type="swipe", amount=1,
+                    location="Dining Hall", note="Student One"),
+        Transaction(student_id=994, type="campus_flex", amount=5,
+                    location="Campus Store", note="Student Two"),
+    ])
     session.commit()
 
-    transaction = Transaction(
-        student_id=997,
-        type="swipe",
-        amount=1,
-        location="Dining Hall",
-        note="Lunch"
-    )
+    one = session.query(Transaction).filter_by(student_id=995).all()
+    two = session.query(Transaction).filter_by(student_id=994).all()
 
-    session.add(transaction)
-    session.commit()
-
-    retrieved_transaction = session.query(Transaction).filter_by(
-        student_id=997
-    ).first()
-
-    assert retrieved_transaction is not None
-    assert retrieved_transaction.student_id == 997
-    assert retrieved_transaction.student.id == 997
-    assert retrieved_transaction.student.name == "Relationship Test Student"
-
-    session.close()
-
+    assert [t.note for t in one] == ["Student One"]
+    assert [t.note for t in two] == ["Student Two"]
