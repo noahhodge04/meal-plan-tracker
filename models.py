@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, Index
 from sqlalchemy.orm import relationship
 
 from database import Base
@@ -6,8 +6,14 @@ from database import Base
 class Student(Base):
     __tablename__ = "students"
 
+    __table_args__ = (
+        Index("uq_students_login_id", "login_id", unique=True),
+    )
+
     id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=False)
+    login_id = Column(String(20), nullable=False)
+    password_hash = Column(String(255), nullable=False)
 
     swipes = Column(Integer, default=0)
     village_flex = Column(Float, default=0.0)
@@ -17,6 +23,11 @@ class Student(Base):
         "Transaction",
         backref="student",
         lazy=True
+    )
+
+    
+    __table_args__ = (
+        Index("uq_students_login_id", "login_id", unique=True),
     )
 
 
