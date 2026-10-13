@@ -1,11 +1,11 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, Index
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Integer, String, Text, func
 from sqlalchemy.orm import relationship
 
 from database import Base
 
+
 class Student(Base):
     __tablename__ = "students"
-
     __table_args__ = (
         Index("uq_students_login_id", "login_id", unique=True),
     )
@@ -15,19 +15,21 @@ class Student(Base):
     login_id = Column(String(20), nullable=False)
     password_hash = Column(String(255), nullable=False)
 
-    swipes = Column(Integer, default=0)
-    village_flex = Column(Float, default=0.0)
-    campus_flex = Column(Float, default=0.0)
+    swipes = Column(Integer, nullable=False, default=0)
+    starting_swipes = Column(Integer, nullable=False, default=0)
+    village_flex = Column(Float, nullable=False, default=0.0)
+    campus_flex = Column(Float, nullable=False, default=0.0)
+    setup_completed = Column(Boolean, nullable=False, default=False)
 
     transaction = relationship(
         "Transaction",
         backref="student",
-        lazy=True
+        cascade="all, delete-orphan"
     )
-
-    
-    __table_args__ = (
-        Index("uq_students_login_id", "login_id", unique=True),
+    notifications = relationship(
+        "Notification",
+        backref="student",
+        cascade="all, delete-orphan"
     )
 
 
@@ -35,14 +37,34 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True)
-
     student_id = Column(
         Integer,
         ForeignKey("students.id"),
-        nullable=False
+        nullable=False,
+        index=True
     )
-
     type = Column(String(20), nullable=False)
     amount = Column(Float, nullable=False)
-    location = Column(String(100), nullable=False)
-    note =  Column(String(255), nullable=False)
+    location = Column(String(100), nullable=False, default="")
+    note = Column(String(255), nullable=False, default="")
+
+    student = relationship(
+        "Student",
+        backref="transactions"
+    )
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True)
+    student_id = Column(Integer, ForeignKey("students.id"), nullable=False, index=True)
+    title = Column(String(100), nullable=False)
+    message = Column(Text, nullable=False)
+    is_read = Column(Boolean, nullable=False, default=False)
+    created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
+
+    student = relationship(
+        "Student",
+        backref="notifications"
+    )
