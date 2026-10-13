@@ -1,72 +1,87 @@
-from database import Base, engine, SessionLocal
-from models import Student, Transaction
+import math
 
+from database import SessionLocal
+from models import Notification, Student, Transaction
 from student import get_student_by_id
 
 
-#Create/return a database session
 def get_db_session():
-    Base.metadata.create_all(engine)
     return SessionLocal()
 
-#Validate input, update student balances, and record the transaction
-def create_transaction(type, amount, location="", note=""):
-    # Updates the balance, then creates a Transaction object to record the change
-    # Validates type and amount before allowing input
 
-    valid_types = ("swipe", "village_flex","campus_flex")
-    if type not in valid_types:  
-        raise ValueError(f"Invalid transaction type. Must be one of {valid_types}")
-            
-    if amount is None or amount <= 0:
+def create_transaction(student_id, type, amount, location="", note=""):
+    """Validate a transaction, update the student's balance, and record it."""
+
+    valid_types = ("swipe", "village_flex", "campus_flex")
+    if type not in valid_types:
+        raise ValueError(f"Invalid transaction type. Must be one of {valid_types}.")
+
+    if isinstance(amount, bool):
         raise ValueError("Transaction amount must be greater than zero.")
+
+    try:
+        amount = float(amount)
+
+    except (TypeError, ValueError):
+        raise ValueError("Transaction amount must be a number greater than zero.")
+
+    if not math.isfinite(amount) or amount <= 0:
+        raise ValueError("Transaction amount must be a finite number greater than zero.")
+
+    if type == "swipe" and not amount.is_integer():
+        raise ValueError("Swipe transaction amounts must be whole numbers.")
+
+    if not isinstance(location, str) or len(location) > 100:
+        raise ValueError("Location must be 100 characters or fewer.")
+
+    if not isinstance(note, str) or len(note) > 255:
+        raise ValueError("Note must be 255 characters or fewer.")
 
     session = get_db_session()
 
     try:
         student = get_student_by_id(session, student_id)
-        # Checks transaction type, valueCheck
-        if(type == "swipe"):
+
+        if not student.setup_completed:
+            raise ValueError("Complete initial balance setup before recording transactions.")
+
+        if type == "swipe":
             if student.swipes < amount:
-                raise ValueError("Insufficent swipes available.")
-            
+                raise ValueError("Insufficient swipes available.")
             student.swipes -= int(amount)
-
-        elif(type == "campus_flex"):
+        elif type == "campus_flex":
             if student.campus_flex < amount:
-                raise ValueError("Insufficient Campus Flex balance")
-            
-            student.campus_flex -= amount
+                raise ValueError("Insufficient Campus Flex balance.")
+            student.campus_flex = round(student.campus_flex - amount, 2)
+        else:
+            if student.village_flex + student.campus_flex < amount:
 
-        elif(type == "village_flex"):
-            total_flex = student.village_flex + student.campus_flex
-            if total_flex < amount:
-                raise ValueError("Insufficient total Flex balance")
+                raise ValueError("Insufficient total Flex balance.")
 
-            if student.village_flex >= amount:
-                student.village_flex -= amount
-            else:
-                #Deplete Village, pull from Campus
-                remainder = amount -student.village_flex
-                student.village_flex = 0.0
-                student.campus_flex -= remainder
+            from_village = min(student.village_flex, amount)
 
-        # Transaction record
-        txn = Transaction(
+            student.village_flex = round(student.village_flex - from_village, 2)
+            student.campus_flex = round(student.campus_flex - (amount - from_village), 2)
+
+        session.add(Transaction(
             student_id=student.id,
             type=type,
-            amount=float(amount),
-            location=location,
-            note=note
-        )
-        session.add(txn)
+            amount=amount,
+            location=location.strip(),
+            note=note.strip(),
+        ))
+        session.add(Notification(
+            student_id=student.id,
+            title="Meal-plan transaction recorded",
+            message=f"A {type.replace('_', ' ')} transaction for {amount:g} was recorded.",
+        ))
         session.commit()
 
         return {
             "status": "success",
             "swipes": student.swipes,
             "village_flex": student.village_flex,
-            "campus_flex": student.campus_flex
+            "campus_flex": student.campus_flex,
         }
     except Exception:
         session.rollback()
@@ -74,15 +89,19 @@ def create_transaction(type, amount, location="", note=""):
     finally:
         session.close()
 
-#Retrieve all transaction history for the student, newest first.
-def get_transactions():
+
+def get_transactions(student_id):
+    """Retrieve a student's transaction history, newest first."""
 
     session = get_db_session()
-
     try:
         student = get_student_by_id(session, student_id)
-        txns = (session.query(Transaction).filter_by(student_id=student.id).order_by(Transaction.id.desc()).all())
-
+        txns = (
+            session.query(Transaction)
+            .filter_by(student_id=student.id)
+            .order_by(Transaction.id.desc())
+            .all()
+        )
         return [
             {
                 "id": t.id,
@@ -97,21 +116,16 @@ def get_transactions():
         session.close()
 
 
-#Clear the transaction history.
 def clear_transactions(student_id):
-    """Clear transaction history for one student only."""
+    """Clear transaction history for one student only; does not change balances."""
 
     session = get_db_session()
 
     try:
         get_student_by_id(session, student_id)
-
         session.query(Transaction).filter_by(
-            student_id=student_id
-        ).delete(synchronize_session=False)
-
+            student_id=student_id).delete(synchronize_session=False)
         session.commit()
-
     except Exception:
         session.rollback()
         raise
