@@ -1,7 +1,7 @@
 from database import Base, engine, SessionLocal
 from models import Student, Transaction
 
-from student import get_hardcoded_student
+from student import get_student_by_id
 
 
 #Create/return a database session
@@ -24,7 +24,7 @@ def create_transaction(type, amount, location="", note=""):
     session = get_db_session()
 
     try:
-        student = get_hardcoded_student(session)
+        student = get_student_by_id(session, student_id)
         # Checks transaction type, valueCheck
         if(type == "swipe"):
             if student.swipes < amount:
@@ -80,7 +80,7 @@ def get_transactions():
     session = get_db_session()
 
     try:
-        student = get_hardcoded_student(session)
+        student = get_student_by_id(session, student_id)
         txns = (session.query(Transaction).filter_by(student_id=student.id).order_by(Transaction.id.desc()).all())
 
         return [
@@ -98,13 +98,23 @@ def get_transactions():
 
 
 #Clear the transaction history.
-def clear_transactions():
+def clear_transactions(student_id):
+    """Clear transaction history for one student only."""
 
     session = get_db_session()
 
     try:
-        session.query(Transaction).delete()
+        get_student_by_id(session, student_id)
+
+        session.query(Transaction).filter_by(
+            student_id=student_id
+        ).delete(synchronize_session=False)
+
         session.commit()
+
+    except Exception:
+        session.rollback()
+        raise
 
     finally:
         session.close()
