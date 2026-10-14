@@ -110,14 +110,14 @@ def api_logout():
 @app.route("/")
 def home():
     if get_authenticated_student_id() is None:
-        return "Authentication required", 401
+        return render_template("./login_form.html"), 401
     return render_template("./balance.html")
 
 
 @app.route("/new")
 def transaction_page():
     if get_authenticated_student_id() is None:
-        return "Authentication required", 401
+        return render_template("./login_form.html"), 401
     return render_template("./transaction_form.html")
 
 @app.route("/login")
@@ -130,6 +130,8 @@ def register_page():
 
 @app.route("/setup")
 def balance_setup_page():
+    if get_authenticated_student_id() is None:
+            return render_template("./login_form.html"), 401
     return render_template("./balance_form.html")
 
 
@@ -153,7 +155,6 @@ def api_set_starting_balances():
 
     data = request_data()
     try:
-        print(data)
         if any(key not in data for key in ("swipes", "village_flex", "campus_flex")):
             raise ValueError("swipes, village_flex, and campus_flex are all required.")
         raw_swipes = data.get("swipes")
