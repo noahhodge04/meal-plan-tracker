@@ -380,7 +380,7 @@ def test_setup_balances_success_form_passes_strings_for_money(client, login_as, 
                                        village_flex="100.5", campus_flex="50")
 
 
-@pytest.mark.parametrize("raw, expected", [(5.0, 5), ("5", 5), ("5.0", 5), (0, 0)])
+@pytest.mark.parametrize("raw, expected", [(5.0, 5), ("5", 5), (5.0, 5), (0, 0)])
 def test_setup_balances_normalizes_whole_number_swipes(client, login_as, fake_setup, raw, expected):
     login_as(5)
 

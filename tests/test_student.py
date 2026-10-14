@@ -377,3 +377,21 @@ def test_reset_swipes_rolls_back_on_commit_error(use_fake, make_student):
 
     assert fake.rolled_back is True
     assert fake.closed is True
+
+
+# --------------------------------------------------------------------------
+# test_student_preservation
+# --------------------------------------------------------------------------
+
+def test_create_student_preserves_existing_student(session):
+    session.add(Student(id=1, name="Existing Student", login_id="MP-EXIST01",
+                        password_hash="x", swipes=10, village_flex=25.0, campus_flex=15.0))
+    session.commit()
+
+    created = student.create_student("Second Student", "safe-password-123")
+
+    session.expire_all()
+    existing = session.get(Student, 1)
+    assert existing.name == "Existing Student"
+    assert (existing.swipes, existing.village_flex, existing.campus_flex) == (10, 25.0, 15.0)
+    assert created["student_id"] != 1

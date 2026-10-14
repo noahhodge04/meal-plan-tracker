@@ -19,6 +19,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
+import models
 import database
 
 _test_engine = create_engine(
@@ -29,12 +30,9 @@ _test_engine = create_engine(
 database.engine = _test_engine
 database.SessionLocal = sessionmaker(bind=_test_engine)
 
-import models  # noqa: E402,F401  (registers tables on Base.metadata)
 
 
-# --------------------------------------------------------------------------
-# Real in-memory database
-# --------------------------------------------------------------------------
+
 @pytest.fixture
 def db():
     """Fresh empty tables for each test. Returns the SessionLocal factory."""

@@ -21,14 +21,14 @@ class Student(Base):
     campus_flex = Column(Float, nullable=False, default=0.0)
     setup_completed = Column(Boolean, nullable=False, default=False)
 
-    transaction = relationship(
+    transactions = relationship(
         "Transaction",
-        backref="student",
+        back_populates="student",
         cascade="all, delete-orphan"
     )
     notifications = relationship(
         "Notification",
-        backref="student",
+        back_populates="student",
         cascade="all, delete-orphan"
     )
 
@@ -50,7 +50,7 @@ class Transaction(Base):
 
     student = relationship(
         "Student",
-        backref="transactions"
+        back_populates="transactions"
     )
 
 
@@ -66,5 +66,5 @@ class Notification(Base):
 
     student = relationship(
         "Student",
-        backref="notifications"
+        back_populates="notifications"
     )
