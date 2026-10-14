@@ -16,7 +16,12 @@ async function displayTransactionRecord() {
                     } else{
                         li.textContent += `$${transaction.amount}`;
                     }
-                    li.textContent += ` at ${transaction.location} (${transaction.note})`;
+                    if(transaction.location){
+                        li.textContent += ` at ${transaction.location}`
+                    } 
+                    if(transaction.note){
+                        li.textContent += ` (${transaction.note})`
+                        }
                     list.appendChild(li);
                 }
             });
