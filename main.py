@@ -43,12 +43,24 @@ def error_response(message, status):
 def api_register():
     data = request_data()
     try:
-        new_student = create_student(data.get("name", ""), data.get("password", ""))
-        api_login()
-        
+        new_student = create_student(
+            data.get("username", data.get("name", "")),
+            data.get("password", ""),
+        )
+        session.clear()
+        session["student_id"] = new_student["student_id"]
+
         return jsonify({
             "success": True,
-            "data": new_student,
+            "data": {
+                "student_id": new_student["student_id"],
+                "username": new_student["name"],
+                "name": new_student["name"],
+                "swipes": new_student["swipes"],
+                "village_flex": new_student["village_flex"],
+                "campus_flex": new_student["campus_flex"],
+                "setup_completed": new_student["setup_completed"],
+            },
         }), 201
     
     except ValueError as e:
@@ -62,17 +74,17 @@ def api_register():
 def api_login():
     data = request_data()
 
-    login_id = data.get("login_id", "")
+    username = data.get("username", "")
     password = data.get("password", "")
 
-    if not isinstance(login_id, str) or not login_id.strip() or not isinstance(password, str) or not password:
-        return error_response("Login ID and password are required.", 400)
+    if not isinstance(username, str) or not username.strip() or not isinstance(password, str) or not password:
+        return error_response("Username and password are required.", 400)
 
     db = SessionLocal()
     try:
         student = (
             db.query(Student)
-            .filter_by(login_id=login_id.strip())
+            .filter_by(name=username.strip())
             .first()
         )
         if (
@@ -83,7 +95,7 @@ def api_login():
                 password,
             )
         ):
-            return error_response("Invalid login ID or password.", 401)
+            return error_response("Invalid username or password.", 401)
 
         session.clear()
         session["student_id"] = student.id
@@ -91,7 +103,7 @@ def api_login():
             "success": True,
             "data": {
                 "student_id": student.id,
-                "login_id": student.login_id,
+                "username": student.name,
                 "name": student.name,
                 "setup_completed": student.setup_completed,
             },

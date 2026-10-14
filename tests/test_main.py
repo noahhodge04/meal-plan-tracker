@@ -47,7 +47,7 @@ def new_account(db):
     """A real registered student who has NOT done initial setup."""
     created = student.create_student("Alice", "password123")
     return {"student_id": created["student_id"],
-            "login_id": created["login_id"],
+            "username": created["name"],
             "password": "password123"}
 
 
@@ -59,7 +59,7 @@ def account(new_account):
 
 
 def log_in(client, acct):
-    resp = client.post("/api/login", json={"login_id": acct["login_id"],
+    resp = client.post("/api/login", json={"username": acct["username"],
                                            "password": acct["password"]})
     assert resp.status_code == 200
     return resp
@@ -125,27 +125,38 @@ def test_main_refuses_to_start_without_secret_key():
 # POST /api/register
 # --------------------------------------------------------------------------
 def test_register_success_json(client, session):
-    resp = client.post("/api/register", json={"name": "Alice", "password": "password123"})
+    resp = client.post("/api/register", json={"username": "Alice", "password": "password123"})
 
     assert resp.status_code == 201
     body = resp.get_json()
     assert body["success"] is True
+    assert body["data"]["username"] == "Alice"
     assert body["data"]["name"] == "Alice"
-    assert body["data"]["login_id"].startswith("MP-")
+    assert "login_id" not in body["data"]
     assert body["data"]["swipes"] == 0
     assert body["data"]["setup_completed"] is False
     assert session.query(Student).count() == 1
+    assert session_contents(client)["student_id"] == body["data"]["student_id"]
 
 
 def test_register_success_form(client):
-    resp = client.post("/api/register", data={"name": "Alice", "password": "password123"})
+    resp = client.post("/api/register", data={"username": "Alice", "password": "password123"})
 
     assert resp.status_code == 201
-    assert resp.get_json()["data"]["name"] == "Alice"
+    assert resp.get_json()["data"]["username"] == "Alice"
+
+
+def test_register_rejects_duplicate_username(client):
+    first = client.post("/api/register", json={"username": "Alice", "password": "password123"})
+    second = client.post("/api/register", json={"username": "Alice", "password": "password456"})
+
+    assert first.status_code == 201
+    assert second.status_code == 400
+    assert second.get_json()["error"] == "That username is already taken."
 
 
 def test_register_does_not_expose_password_data(client):
-    resp = client.post("/api/register", json={"name": "Alice", "password": "password123"})
+    resp = client.post("/api/register", json={"username": "Alice", "password": "password123"})
 
     text = resp.get_data(as_text=True)
     assert "password123" not in text
@@ -153,10 +164,10 @@ def test_register_does_not_expose_password_data(client):
 
 
 @pytest.mark.parametrize("payload, message", [
-    ({"name": "", "password": "password123"}, "name is required"),
-    ({"password": "password123"}, "name is required"),
-    ({"name": "Alice", "password": "short"}, "at least 8 characters"),
-    ({"name": "Alice"}, "at least 8 characters"),
+    ({"username": "", "password": "password123"}, "Username is required"),
+    ({"password": "password123"}, "Username is required"),
+    ({"username": "Alice", "password": "short"}, "at least 8 characters"),
+    ({"username": "Alice"}, "at least 8 characters"),
 ])
 def test_register_validation_errors(client, session, payload, message):
     resp = client.post("/api/register", json=payload)
@@ -172,7 +183,7 @@ def test_register_unexpected_error_is_generic_500(client, monkeypatch):
         raise RuntimeError("secret internal detail")
     monkeypatch.setattr(main, "create_student", boom)
 
-    resp = client.post("/api/register", json={"name": "Alice", "password": "password123"})
+    resp = client.post("/api/register", json={"username": "Alice", "password": "password123"})
 
     assert resp.status_code == 500
     assert resp.get_json() == {"success": False, "error": "An internal error occurred."}
@@ -183,12 +194,12 @@ def test_register_unexpected_error_is_generic_500(client, monkeypatch):
 # POST /api/login
 # --------------------------------------------------------------------------
 def test_login_success_for_unconfigured_student(client, new_account):
-    resp = client.post("/api/login", json={"login_id": new_account["login_id"],
+    resp = client.post("/api/login", json={"username": new_account["username"],
                                            "password": new_account["password"]})
 
     assert resp.status_code == 200
     assert resp.get_json()["data"] == {"student_id": new_account["student_id"],
-                                       "login_id": new_account["login_id"],
+                                       "username": "Alice",
                                        "name": "Alice",
                                        "setup_completed": False}
     assert session_contents(client)["student_id"] == new_account["student_id"]
@@ -200,31 +211,31 @@ def test_login_reports_setup_completed(client, account):
 
 
 def test_login_accepts_form_data(client, account):
-    resp = client.post("/api/login", data={"login_id": account["login_id"],
+    resp = client.post("/api/login", data={"username": account["username"],
                                            "password": account["password"]})
     assert resp.status_code == 200
 
 
-def test_login_trims_login_id(client, account):
-    resp = client.post("/api/login", json={"login_id": f"  {account['login_id']}  ",
+def test_login_trims_username(client, account):
+    resp = client.post("/api/login", json={"username": f"  {account['username']}  ",
                                            "password": account["password"]})
     assert resp.status_code == 200
 
 
 def test_login_wrong_password(client, account):
-    resp = client.post("/api/login", json={"login_id": account["login_id"],
+    resp = client.post("/api/login", json={"username": account["username"],
                                            "password": "wrong-password"})
 
     assert resp.status_code == 401
-    assert resp.get_json() == {"success": False, "error": "Invalid login ID or password."}
+    assert resp.get_json() == {"success": False, "error": "Invalid username or password."}
     assert "student_id" not in session_contents(client)
 
 
-def test_login_unknown_id_gives_same_error_as_wrong_password(client, account):
-    """Don't reveal which login IDs exist."""
-    unknown = client.post("/api/login", json={"login_id": "MP-NOSUCHID",
+def test_login_unknown_username_gives_same_error_as_wrong_password(client, account):
+    """Don't reveal which usernames exist."""
+    unknown = client.post("/api/login", json={"username": "UnknownUser",
                                               "password": "password123"})
-    wrong_pw = client.post("/api/login", json={"login_id": account["login_id"],
+    wrong_pw = client.post("/api/login", json={"username": account["username"],
                                                "password": "wrong-password"})
 
     assert unknown.status_code == wrong_pw.status_code == 401
@@ -235,25 +246,26 @@ def test_login_rejected_for_empty_password_hash(client, session):
     session.add(Student(name="Broken", login_id="MP-BROKEN01", password_hash=""))
     session.commit()
 
-    resp = client.post("/api/login", json={"login_id": "MP-BROKEN01", "password": "anything1"})
+    resp = client.post("/api/login", json={"username": "Broken", "password": "anything1"})
 
     assert resp.status_code == 401
 
 
 @pytest.mark.parametrize("payload", [
     {},
-    {"login_id": "MP-1"},
+    {"username": "Alice"},
     {"password": "password123"},
-    {"login_id": "   ", "password": "password123"},
-    {"login_id": 123, "password": "password123"},        # non-string login id
-    {"login_id": "MP-1", "password": 12345678},          # non-string password
-    {"login_id": None, "password": "password123"},
+    {"username": "   ", "password": "password123"},
+    {"username": 123, "password": "password123"},        # non-string username
+    {"username": "Alice", "password": 12345678},         # non-string password
+    {"username": None, "password": "password123"},
+    {"login_id": "MP-1", "password": "password123"},    # Login ID is no longer accepted
 ])
 def test_login_requires_both_fields_as_strings(client, payload):
     resp = client.post("/api/login", json=payload)
 
     assert resp.status_code == 400
-    assert resp.get_json()["error"] == "Login ID and password are required."
+    assert resp.get_json()["error"] == "Username and password are required."
 
 
 def test_login_replaces_existing_session(client, account, login_as):
@@ -802,9 +814,11 @@ def test_e2e_new_student_must_complete_setup_before_spending(client, new_account
 
 
 def test_e2e_register_then_setup_then_spend_then_reset(client):
-    reg = client.post("/api/register", json={"name": "Alice", "password": "password123"})
-    login_id = reg.get_json()["data"]["login_id"]
-    client.post("/api/login", json={"login_id": login_id, "password": "password123"})
+    reg = client.post("/api/register", json={"username": "Alice", "password": "password123"})
+    username = reg.get_json()["data"]["username"]
+    assert session_contents(client)["student_id"] == reg.get_json()["data"]["student_id"]
+    client.post("/api/logout")
+    client.post("/api/login", json={"username": username, "password": "password123"})
 
     setup = client.post("/api/setup/balances",
                         json={"swipes": 14, "village_flex": 100, "campus_flex": 50.5})
@@ -918,7 +932,7 @@ def test_e2e_students_cannot_see_each_others_data(client, account):
                                            "location": "Hall", "note": "alice only"})
 
     bob = main.app.test_client()
-    bob.post("/api/login", json={"login_id": other["login_id"], "password": "password456"})
+    bob.post("/api/login", json={"username": other["name"], "password": "password456"})
 
     assert bob.get("/api/transactions").get_json()["data"] == []
     assert bob.get("/api/notifications").get_json()["data"] == []
