@@ -42,6 +42,7 @@ def api_register():
     data = request_data()
     try:
         new_student = create_student(data.get("name", ""), data.get("password", ""))
+        api_login()
         
         return jsonify({
             "success": True,
@@ -59,17 +60,17 @@ def api_register():
 def api_login():
     data = request_data()
 
-    login_id = data.get("login_id", "")
+    name = data.get("name", "")
     password = data.get("password", "")
 
-    if not isinstance(login_id, str) or not login_id.strip() or not isinstance(password, str) or not password:
+    if not isinstance(name, str) or not name.strip() or not isinstance(password, str) or not password:
         return error_response("Login ID and password are required.", 400)
 
     db = SessionLocal()
     try:
         student = (
             db.query(Student)
-            .filter_by(name=login_id.strip())
+            .filter_by(name=name.strip())
             .first()
         )
         if (
@@ -127,6 +128,10 @@ def login_page():
 def register_page():
     return render_template("./register_form.html")
 
+@app.route("/setup")
+def balance_setup_page():
+    return render_template("./balance_form.html")
+
 
 @app.route("/api/balances", methods=["GET"])
 def api_get_balances():
@@ -148,6 +153,7 @@ def api_set_starting_balances():
 
     data = request_data()
     try:
+        print(data)
         if any(key not in data for key in ("swipes", "village_flex", "campus_flex")):
             raise ValueError("swipes, village_flex, and campus_flex are all required.")
         raw_swipes = data.get("swipes")
