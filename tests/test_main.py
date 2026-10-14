@@ -305,7 +305,7 @@ def test_api_requires_authentication(client, method, url):
     assert resp.get_json() == {"success": False, "error": "Authentication required."}
 
 
-@pytest.mark.parametrize("url", ["/", "/new"])
+@pytest.mark.parametrize("url", ["/", "/new", "/settings"])
 def test_pages_require_authentication(client, url):
     assert client.get(url).status_code == 401
 
@@ -313,6 +313,7 @@ def test_pages_require_authentication(client, url):
 @pytest.mark.parametrize("url, template", [
     ("/", "balance.html"),
     ("/new", "transaction_form.html"),
+    ("/settings", "settings.html"),
 ])
 def test_pages_render_when_authenticated(client, login_as, monkeypatch, url, template):
     monkeypatch.setattr(main, "render_template", lambda name, **kw: f"rendered {name}")
@@ -618,6 +619,73 @@ def test_post_transaction_unexpected_error_is_generic_500(client, login_as, fake
 # --------------------------------------------------------------------------
 # Notifications
 # --------------------------------------------------------------------------
+def test_get_notification_settings_requires_authentication(client):
+    resp = client.get("/api/notification-settings")
+
+    assert resp.status_code == 401
+    assert resp.get_json() == {"success": False, "error": "Authentication required."}
+
+
+def test_get_notification_settings_returns_own_defaults(client, login_as, seeded):
+    login_as(3)
+
+    resp = client.get("/api/notification-settings")
+
+    assert resp.status_code == 200
+    assert resp.get_json() == {
+        "success": True,
+        "data": {
+            "swipe_alert_threshold": None,
+            "village_flex_alert_threshold": None,
+            "campus_flex_alert_threshold": None,
+        },
+    }
+
+
+def test_save_notification_settings(client, login_as, seeded):
+    login_as(3)
+
+    resp = client.post("/api/notification-settings", json={
+        "swipe_alert_threshold": "5",
+        "village_flex_alert_threshold": "10.50",
+        "campus_flex_alert_threshold": "",
+    })
+
+    assert resp.status_code == 200
+    assert resp.get_json() == {
+        "success": True,
+        "data": {
+            "swipe_alert_threshold": 5,
+            "village_flex_alert_threshold": 10.5,
+            "campus_flex_alert_threshold": None,
+        },
+    }
+    assert client.get("/api/notification-settings").get_json()["data"] == resp.get_json()["data"]
+
+
+def test_save_notification_settings_requires_every_field(client, login_as, seeded):
+    login_as(3)
+
+    resp = client.post("/api/notification-settings", json={"swipe_alert_threshold": 5})
+
+    assert resp.status_code == 400
+    assert "are all required" in resp.get_json()["error"]
+
+
+def test_save_notification_settings_rejects_invalid_value(client, login_as, seeded):
+    login_as(3)
+
+    resp = client.post("/api/notification-settings", json={
+        "swipe_alert_threshold": 1.5,
+        "village_flex_alert_threshold": None,
+        "campus_flex_alert_threshold": None,
+    })
+
+    assert resp.status_code == 400
+    assert "Swipe alert threshold" in resp.get_json()["error"]
+    assert client.get("/api/notification-settings").get_json()["data"]["swipe_alert_threshold"] is None
+
+
 @pytest.fixture
 def notes(seeded):
     """Notifications: two for student 1 (First, Second), one for student 2 (Other)."""
@@ -659,6 +727,18 @@ def test_get_notifications_empty(client, login_as, seeded):
     login_as(3)
 
     assert client.get("/api/notifications").get_json() == {"success": True, "data": []}
+
+
+def test_mark_notification_read_removes_it_from_unread_notifications(
+    client, login_as, notes, db
+):
+    login_as(1)
+    notification_id = notes[0]
+
+    response = client.post(f"/api/notifications/{notification_id}/read")
+
+    assert response.status_code == 200
+    assert is_read(db, notification_id) is True
 
 
 def test_mark_notification_read(client, login_as, notes, db):

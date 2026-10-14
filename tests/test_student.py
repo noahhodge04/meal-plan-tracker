@@ -117,6 +117,46 @@ def test_create_student_accepts_minimum_length_password(session):
     assert count_students(session) == 1
 
 
+def test_notification_settings_default_to_disabled(session):
+    result = student.create_student("Alice", "password123")
+
+    assert student.get_notification_settings(result["student_id"]) == {
+        "swipe_alert_threshold": None,
+        "village_flex_alert_threshold": None,
+        "campus_flex_alert_threshold": None,
+    }
+
+
+def test_set_notification_settings_persists_thresholds(session):
+    result = student.create_student("Alice", "password123")
+
+    settings = student.set_notification_settings(
+        result["student_id"], 5, 10, 2.50
+    )
+
+    assert settings == {
+        "swipe_alert_threshold": 5,
+        "village_flex_alert_threshold": 10.0,
+        "campus_flex_alert_threshold": 2.5,
+    }
+
+
+@pytest.mark.parametrize("value", [-1, 1.5, "2.5", True, "nope"])
+def test_set_notification_settings_rejects_invalid_swipe_threshold(session, value):
+    result = student.create_student("Alice", "password123")
+
+    with pytest.raises(ValueError, match="Swipe alert threshold"):
+        student.set_notification_settings(result["student_id"], value, None, None)
+
+
+@pytest.mark.parametrize("value", [-1, float("nan"), float("inf"), True, "nope"])
+def test_set_notification_settings_rejects_invalid_flex_threshold(session, value):
+    result = student.create_student("Alice", "password123")
+
+    with pytest.raises(ValueError, match="Village Flex alert threshold"):
+        student.set_notification_settings(result["student_id"], None, value, None)
+
+
 @pytest.mark.parametrize("bad_name", [None, "", "   ", 123])
 def test_create_student_rejects_bad_name(session, bad_name):
     with pytest.raises(ValueError, match="name is required"):

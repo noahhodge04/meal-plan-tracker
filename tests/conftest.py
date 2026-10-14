@@ -153,12 +153,16 @@ class FakeSession:
 def make_student():
     def _make(id=1, name="Test Student", login_id="MP-TEST0001", password_hash="hash",
               swipes=10, starting_swipes=10, village_flex=25.00, campus_flex=15.00,
-              setup_completed=True):
+              setup_completed=True, swipe_alert_threshold=None,
+              village_flex_alert_threshold=None, campus_flex_alert_threshold=None):
         return SimpleNamespace(
             id=id, name=name, login_id=login_id, password_hash=password_hash,
             swipes=swipes, starting_swipes=starting_swipes,
             village_flex=village_flex, campus_flex=campus_flex,
             setup_completed=setup_completed,
+            swipe_alert_threshold=swipe_alert_threshold,
+            village_flex_alert_threshold=village_flex_alert_threshold,
+            campus_flex_alert_threshold=campus_flex_alert_threshold,
         )
     return _make
 
