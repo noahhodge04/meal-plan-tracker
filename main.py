@@ -69,7 +69,7 @@ def api_login():
     try:
         student = (
             db.query(Student)
-            .filter_by(login_id=login_id.strip())
+            .filter_by(name=login_id.strip())
             .first()
         )
         if (
@@ -118,6 +118,14 @@ def transaction_page():
     if get_authenticated_student_id() is None:
         return "Authentication required", 401
     return render_template("./transaction_form.html")
+
+@app.route("/login")
+def login_page():
+    return render_template("./login_form.html")
+
+@app.route("/register")
+def register_page():
+    return render_template("./register_form.html")
 
 
 @app.route("/api/balances", methods=["GET"])
