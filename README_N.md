@@ -22,7 +22,7 @@ python main.py
 - `GET /api/notifications` — list the authenticated student's notifications.
 - `POST /api/notifications/<id>/read` — mark one of that student's notifications as read.
 
-Existing `/api/register`, `/api/login`, `/api/logout`, `/api/balances`, and `/api/transactions` routes remain available. Registration does not automatically log the user in; login returns `setup_completed` so a future UI can route appropriately.
+Existing `/api/register`, `/api/login`, `/api/logout`, `/api/balances`, and `/api/transactions` routes remain available. Registration logs the student in automatically; later sign-ins use the chosen unique username and password. Login returns `setup_completed` so a future UI can route appropriately.
 
 ## Behavior notes
 
