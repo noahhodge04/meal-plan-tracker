@@ -42,6 +42,7 @@ def api_register():
     data = request_data()
     try:
         new_student = create_student(data.get("name", ""), data.get("password", ""))
+        api_login()
         
         return jsonify({
             "success": True,
@@ -59,17 +60,17 @@ def api_register():
 def api_login():
     data = request_data()
 
-    login_id = data.get("login_id", "")
+    name = data.get("name", "")
     password = data.get("password", "")
 
-    if not isinstance(login_id, str) or not login_id.strip() or not isinstance(password, str) or not password:
+    if not isinstance(name, str) or not name.strip() or not isinstance(password, str) or not password:
         return error_response("Login ID and password are required.", 400)
 
     db = SessionLocal()
     try:
         student = (
             db.query(Student)
-            .filter_by(login_id=login_id.strip())
+            .filter_by(name=name.strip())
             .first()
         )
         if (
@@ -109,15 +110,29 @@ def api_logout():
 @app.route("/")
 def home():
     if get_authenticated_student_id() is None:
-        return "Authentication required", 401
+        return render_template("./login_form.html"), 401
     return render_template("./balance.html")
 
 
 @app.route("/new")
 def transaction_page():
     if get_authenticated_student_id() is None:
-        return "Authentication required", 401
+        return render_template("./login_form.html"), 401
     return render_template("./transaction_form.html")
+
+@app.route("/login")
+def login_page():
+    return render_template("./login_form.html")
+
+@app.route("/register")
+def register_page():
+    return render_template("./register_form.html")
+
+@app.route("/setup")
+def balance_setup_page():
+    if get_authenticated_student_id() is None:
+            return render_template("./login_form.html"), 401
+    return render_template("./balance_form.html")
 
 
 @app.route("/api/balances", methods=["GET"])
