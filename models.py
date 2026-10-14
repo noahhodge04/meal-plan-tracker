@@ -8,6 +8,7 @@ class Student(Base):
     __tablename__ = "students"
     __table_args__ = (
         Index("uq_students_login_id", "login_id", unique=True),
+        Index("uq_students_username", "name", unique=True),
     )
 
     id = Column(Integer, primary_key=True)

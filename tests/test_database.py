@@ -202,7 +202,7 @@ def test_notification_belongs_to_student(session):
 # --------------------------------------------------------------------------
 def test_deleting_student_deletes_their_transactions_and_notifications(session):
     add_student(session, 1)
-    add_student(session, 2)
+    add_student(session, 2, name="Other Student")
     add_txn(session, 1)
     add_txn(session, 2)
     add_note(session, 1)

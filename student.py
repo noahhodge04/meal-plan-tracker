@@ -27,10 +27,12 @@ def get_student_by_id(session, student_id):
 
 
 def create_student(name, password):
-    """Create a student account with a generated login ID and unconfigured balances."""
+    """Create a student account with a unique username and unconfigured balances."""
 
     if not isinstance(name, str) or not name.strip():
-        raise ValueError("Student name is required.")
+        raise ValueError("Username is required.")
+    if len(name.strip()) > 100:
+        raise ValueError("Username must be 100 characters or fewer.")
 
     if not isinstance(password, str) or len(password) < 8:
         raise ValueError("Password must be at least 8 characters long.")
@@ -39,6 +41,9 @@ def create_student(name, password):
 
     try:
         name = name.strip()
+        if session.query(Student.id).filter_by(name=name).first() is not None:
+            raise ValueError("That username is already taken.")
+
         for _ in range(10):
             login_id = f"MP-{secrets.token_hex(4).upper()}"
             if session.query(Student.id).filter_by(login_id=login_id).first() is None:
@@ -70,6 +75,11 @@ def create_student(name, password):
             "setup_completed": student.setup_completed,
         }
 
+    except IntegrityError as error:
+        session.rollback()
+        if "students.name" in str(error.orig):
+            raise ValueError("That username is already taken.") from error
+        raise
     except Exception:
         session.rollback()
         raise
