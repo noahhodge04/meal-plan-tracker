@@ -45,6 +45,12 @@ def create_transaction(student_id, type, amount, location="", note=""):
         if not student.setup_completed:
             raise ValueError("Complete initial balance setup before recording transactions.")
 
+        previous_balances = {
+            "swipe_alert_threshold": student.swipes,
+            "village_flex_alert_threshold": student.village_flex,
+            "campus_flex_alert_threshold": student.campus_flex,
+        }
+
         if type == "swipe":
             if student.swipes < amount:
                 raise ValueError("Insufficient swipes available.")
@@ -75,6 +81,37 @@ def create_transaction(student_id, type, amount, location="", note=""):
             title="Meal-plan transaction recorded",
             message=f"A {type.replace('_', ' ')} transaction for {amount:g} was recorded.",
         ))
+        low_balance_fields = (
+            ("swipe_alert_threshold", "Swipes", student.swipe_alert_threshold, student.swipes),
+            (
+                "village_flex_alert_threshold",
+                "Village Flex",
+                student.village_flex_alert_threshold,
+                student.village_flex,
+            ),
+            (
+                "campus_flex_alert_threshold",
+                "Campus Flex",
+                student.campus_flex_alert_threshold,
+                student.campus_flex,
+            ),
+        )
+        for threshold_field, label, threshold, current_balance in low_balance_fields:
+            if (
+                threshold is not None
+                and previous_balances[threshold_field] > threshold
+                and current_balance <= threshold
+            ):
+                formatted_balance = (
+                    f"{current_balance} swipe{'s' if current_balance != 1 else ''}"
+                    if threshold_field == "swipe_alert_threshold"
+                    else f"${current_balance:.2f}"
+                )
+                session.add(Notification(
+                    student_id=student.id,
+                    title=f"Low {label} balance",
+                    message=f"Your {label} balance is now {formatted_balance}.",
+                ))
         session.commit()
 
         return {

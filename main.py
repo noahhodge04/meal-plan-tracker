@@ -9,7 +9,9 @@ from models import Student, Notification
 from student import (
     create_student,
     get_balances,
+    get_notification_settings,
     reset_swipes_to_starting_balance,
+    set_notification_settings,
     set_starting_balances,
 )
 from transaction import create_transaction, get_transactions
@@ -119,6 +121,14 @@ def transaction_page():
     if get_authenticated_student_id() is None:
         return render_template("./login_form.html"), 401
     return render_template("./transaction_form.html")
+
+
+@app.route("/settings")
+def settings_page():
+    if get_authenticated_student_id() is None:
+        return render_template("./login_form.html"), 401
+    return render_template("./settings.html")
+
 
 @app.route("/login")
 def login_page():
@@ -273,6 +283,49 @@ def api_get_notifications():
         }), 200
     finally:
         db.close()
+
+
+@app.route("/api/notification-settings", methods=["GET", "POST"])
+def api_notification_settings():
+    student_id = get_authenticated_student_id()
+    if student_id is None:
+        return error_response("Authentication required.", 401)
+
+    if request.method == "GET":
+        try:
+            return jsonify({
+                "success": True,
+                "data": get_notification_settings(student_id),
+            }), 200
+        except LookupError as e:
+            session.clear()
+            return error_response(str(e), 404)
+        except Exception:
+            app.logger.exception("Failed to get notification settings")
+            return error_response("An internal error occurred.", 500)
+
+    data = request_data()
+    fields = (
+        "swipe_alert_threshold",
+        "village_flex_alert_threshold",
+        "campus_flex_alert_threshold",
+    )
+    if any(field not in data for field in fields):
+        return error_response(f"{', '.join(fields)} are all required.", 400)
+    try:
+        settings = set_notification_settings(
+            student_id=student_id,
+            **{field: data.get(field) for field in fields},
+        )
+        return jsonify({"success": True, "data": settings}), 200
+    except ValueError as e:
+        return error_response(str(e), 400)
+    except LookupError as e:
+        session.clear()
+        return error_response(str(e), 404)
+    except Exception:
+        app.logger.exception("Failed to save notification settings")
+        return error_response("An internal error occurred.", 500)
 
 
 @app.route("/api/notifications/<int:notification_id>/read", methods=["POST"])

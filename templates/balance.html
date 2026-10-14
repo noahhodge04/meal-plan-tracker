@@ -13,6 +13,7 @@
                 <ul class="nav nav-pills">
                     <li class="nav-item"><a href="{{  url_for('home')  }}" class="nav-link active">Home</a></li>
                     <li class="nav-item>"><a href="{{ url_for('transaction_page') }}" class="nav-link"> New Transaction</a></li>
+                    <li class="nav-item"><a href="{{ url_for('settings_page') }}" class="nav-link">Settings</a></li>
                     <li class="nav-item"><button onclick="logout()" class="nav-link">Log Out</button></li>
                 </ul>
             </header>
@@ -26,6 +27,11 @@
             <script src="{{  url_for('static',filename='js/reset_swipes.js')  }}"></script>
             <button onclick="reset_swipes()" class="btn btn-primary py-3">Reset Swipes</button>
         </div>
+        <section class="container py-3" aria-labelledby="notifications-heading">
+            <h2 id="notifications-heading">Notifications</h2>
+            <ul id="notification-list" class="list-group"></ul>
+            <p id="notifications-status" role="status" aria-live="polite"></p>
+        </section>
         <div class="container py-3" id="transaction-history-container">
             <h2>Transaction History</h2>
             <ul id="transaction-list">
@@ -33,6 +39,7 @@
             </ul>
         </div>
         <script src="{{ url_for('static',filename='js/balance.js') }}"></script>
+        <script src="{{ url_for('static',filename='js/low_balance_notifications.js') }}"></script>
         <script src="{{  url_for('static',filename='js/transaction_record.js')}}"></script>
     </body>
 </html>

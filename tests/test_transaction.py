@@ -311,6 +311,44 @@ def test_failed_transaction_creates_no_notification(setup, make_student):
     assert added_of(fake, Notification) == []
 
 
+def test_transaction_creates_alert_when_swipes_cross_threshold(setup, make_student):
+    _, fake = setup(make_student(swipes=6, swipe_alert_threshold=5))
+
+    spend(type="swipe", amount=1)
+    assert [(n.title, n.message) for n in added_of(fake, Notification)] == [
+        ("Meal-plan transaction recorded", "A swipe transaction for 1 was recorded."),
+        ("Low Swipes balance", "Your Swipes balance is now 5 swipes."),
+    ]
+
+
+def test_transaction_does_not_repeat_low_balance_alert_below_threshold(setup, make_student):
+    _, fake = setup(make_student(swipes=5, swipe_alert_threshold=4))
+
+    spend(type="swipe", amount=1)
+    spend(type="swipe", amount=1)
+    assert [n.title for n in added_of(fake, Notification)].count("Low Swipes balance") == 1
+
+
+def test_flex_transaction_alerts_for_each_balance_it_reduces(setup, make_student):
+    _, fake = setup(make_student(
+        village_flex=5.00,
+        campus_flex=5.00,
+        village_flex_alert_threshold=2.00,
+        campus_flex_alert_threshold=4.00,
+    ))
+
+    spend(type="village_flex", amount=6.00)
+    low_balance_notes = [
+        (n.title, n.message)
+        for n in added_of(fake, Notification)
+        if n.title.startswith("Low ")
+    ]
+    assert low_balance_notes == [
+        ("Low Village Flex balance", "Your Village Flex balance is now $0.00."),
+        ("Low Campus Flex balance", "Your Campus Flex balance is now $4.00."),
+    ]
+
+
 # --------------------------------------------------------------------------
 # Session handling
 # --------------------------------------------------------------------------

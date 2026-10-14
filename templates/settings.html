@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Settings</title>
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-B/GM4XqrwHnWXNOWMbloTmrYXZg10cakYGmpfsR/bbzQ6JAJI4ihuyADKLnBgrCe" crossorigin="anonymous">
+        <script type="module" src="https://cdn.jsdelivr.net/npm/bootstrap@6.0.0-alpha.1/dist/js/bootstrap.bundle.min.js" integrity="sha384-1a/pXj49ZQ1aHEmrJ+gMw1otqoVsYwlEnlD8mIfY2TV03r20Y0CN7uqx1tQogjPL" crossorigin="anonymous"></script>
+    </head>
+    <body class="container">
+        <header class="d-flex justify-content-center py-3">
+            <script src="{{ url_for('static', filename='js/logout.js') }}"></script>
+            <ul class="nav nav-pills">
+                <li class="nav-item"><a href="{{ url_for('home') }}" class="nav-link">Home</a></li>
+                <li class="nav-item"><a href="{{ url_for('transaction_page') }}" class="nav-link">New Transaction</a></li>
+                <li class="nav-item"><a href="{{ url_for('settings_page') }}" class="nav-link active">Settings</a></li>
+                <li class="nav-item"><button onclick="logout()" class="nav-link">Log Out</button></li>
+            </ul>
+        </header>
+        <main class="py-3">
+            <h1>Settings</h1>
+            <section aria-labelledby="low-balance-settings-heading">
+                <h2 id="low-balance-settings-heading">Low-balance alerts</h2>
+                <p>Choose the balance level that should trigger an alert. Leave a field blank to turn that alert off.</p>
+                <form id="notification-settings-form">
+                    <div class="mb-3">
+                        <label for="swipe-alert-threshold" class="form-label">Swipes</label>
+                        <input id="swipe-alert-threshold" name="swipe_alert_threshold"
+                               type="number" min="0" step="1" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="village-flex-alert-threshold" class="form-label">Village Flex ($)</label>
+                        <input id="village-flex-alert-threshold" name="village_flex_alert_threshold"
+                               type="number" min="0" step="0.01" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="campus-flex-alert-threshold" class="form-label">Campus Flex ($)</label>
+                        <input id="campus-flex-alert-threshold" name="campus_flex_alert_threshold"
+                               type="number" min="0" step="0.01" class="form-control">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Save alert settings</button>
+                    <p id="notification-settings-status" role="status" aria-live="polite"></p>
+                </form>
+            </section>
+        </main>
+        <script src="{{ url_for('static', filename='js/low_balance_settings.js') }}"></script>
+    </body>
+</html>

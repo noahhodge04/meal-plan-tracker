@@ -20,6 +20,9 @@ class Student(Base):
     village_flex = Column(Float, nullable=False, default=0.0)
     campus_flex = Column(Float, nullable=False, default=0.0)
     setup_completed = Column(Boolean, nullable=False, default=False)
+    swipe_alert_threshold = Column(Integer, nullable=True)
+    village_flex_alert_threshold = Column(Float, nullable=True)
+    campus_flex_alert_threshold = Column(Float, nullable=True)
 
     transactions = relationship(
         "Transaction",
