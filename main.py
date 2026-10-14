@@ -62,17 +62,17 @@ def api_register():
 def api_login():
     data = request_data()
 
-    name = data.get("name", "")
+    login_id = data.get("login_id", "")
     password = data.get("password", "")
 
-    if not isinstance(name, str) or not name.strip() or not isinstance(password, str) or not password:
+    if not isinstance(login_id, str) or not login_id.strip() or not isinstance(password, str) or not password:
         return error_response("Login ID and password are required.", 400)
 
     db = SessionLocal()
     try:
         student = (
             db.query(Student)
-            .filter_by(name=name.strip())
+            .filter_by(login_id=login_id.strip())
             .first()
         )
         if (
